@@ -211,7 +211,7 @@ cfg_has_statx! {{
             // previous iteration of the code checked it for all errors and for now
             // this is retained.
             // FIXME what about transient conditions like `ENOMEM`?
-            let err2 = cvt(statx(0, ptr::null(), 0, libc::STATX_ALL, ptr::null_mut()))
+            let err2 = cvt(statx(0, ptr::null(), 0, libc::STATX_BASIC_STATS | libc::STATX_BASIC_STATS, ptr::null_mut()))
                 .err()
                 .and_then(|e| e.raw_os_error());
             if err2 == Some(libc::EFAULT) {
@@ -874,7 +874,7 @@ impl DirEntry {
                 fd,
                 name,
                 libc::AT_SYMLINK_NOFOLLOW | libc::AT_STATX_SYNC_AS_STAT,
-                libc::STATX_ALL,
+                libc::STATX_BASIC_STATS | libc::STATX_BASIC_STATS,
             ) } {
                 return ret;
             }
@@ -1142,7 +1142,7 @@ impl File {
                 fd,
                 b"\0" as *const _ as *const c_char,
                 libc::AT_EMPTY_PATH | libc::AT_STATX_SYNC_AS_STAT,
-                libc::STATX_ALL,
+                libc::STATX_BASIC_STATS | libc::STATX_BASIC_STATS,
             ) } {
                 return ret;
             }
@@ -1680,7 +1680,7 @@ pub fn stat(p: &Path) -> io::Result<FileAttr> {
                 libc::AT_FDCWD,
                 p.as_ptr(),
                 libc::AT_STATX_SYNC_AS_STAT,
-                libc::STATX_ALL,
+                libc::STATX_BASIC_STATS | libc::STATX_BASIC_STATS,
             ) } {
                 return ret;
             }
@@ -1699,7 +1699,7 @@ pub fn lstat(p: &Path) -> io::Result<FileAttr> {
                 libc::AT_FDCWD,
                 p.as_ptr(),
                 libc::AT_SYMLINK_NOFOLLOW | libc::AT_STATX_SYNC_AS_STAT,
-                libc::STATX_ALL,
+                libc::STATX_BASIC_STATS | libc::STATX_BASIC_STATS,
             ) } {
                 return ret;
             }
