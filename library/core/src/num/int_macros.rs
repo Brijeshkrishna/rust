@@ -3525,5 +3525,115 @@ macro_rules! int_impl {
         pub const fn max_value() -> Self {
             Self::MAX
         }
+
+        /// Raises self to the power of `exp` and mod by `limit`, using exponentiation by squaring and mode.
+        ///
+        /// # Examples
+        ///
+        /// Basic usage:
+        ///
+        /// ```
+        #[doc = concat!("let x: ", stringify!($SelfT), " = 2; // or any other integer type")]
+        ///
+        /// assert_eq!(x.pow(5,3), 2);
+        /// ```
+        #[must_use = "this returns the result of the operation, \
+                      without modifying the original"]
+        #[inline]
+        pub const fn pow_mod(self, mut exp: usize, limit: usize) -> usize {
+            if exp == 0 {
+                return 1;
+            }
+
+            let mut base = self;
+            let mut acc = 1;
+
+            while exp > 1 {
+                if (exp & 1) == 1 {
+                    acc = (acc * base) % limit;
+                }
+                exp /= 2;
+                base = (base * base) % limit;
+            }
+            (acc * base) % limit
+        }
+
+        /// Wrapping (modular) exponentiation. Computes `self.pow(exp,limit)`,
+        /// wrapping around at the boundary of the type.
+        ///
+        /// # Examples
+        ///
+        /// Basic usage:
+        ///
+        /// ```
+        #[doc = concat!("assert_eq!(3", stringify!($SelfT), ".wrapping_pow(4), 81);")]
+        /// assert_eq!(3i8.wrapping_pow(5), -13);
+        /// assert_eq!(3i8.wrapping_pow(6), -39);
+        /// ```
+        #[must_use = "this returns the result of the operation, \
+                      without modifying the original"]
+        #[inline]
+        const fn wrapping_pow_mod(self, exp: usize, limit: usize) -> Option<usize> {
+            let (a, b) = overflowing_pow_mod(self, exp, limit);
+            if b == true {
+                None
+            } else {
+                Some(a)
+            }
+        }
+
+        /// Calculates the power mod of `self` and `exp` % `limit`.
+        ///
+        /// Returns a tuple of the power mod along with a boolean
+        /// indicating whether an arithmetic overflow would occur. If an
+        /// overflow would have occurred then the wrapped value is returned.
+        ///
+        /// # Examples
+        ///
+        /// Basic usage:
+        ///
+        /// Please note that this example is shared between integer types.
+        /// Which explains why `u32` is used here.
+        ///
+        /// ```
+        /// assert_eq!(7u32.overflowing_pow_mod(1024,14), (7, false));
+        /// assert_eq!(10_240_000_000u32.overflowing_pow_mod(u32::MAX,7), (2, true));
+        /// ```
+
+        #[must_use = "this returns the result of the operation, \
+            without modifying the original"]
+        #[inline(always)]
+        pub const fn overflowing_pow_mod(self, mut exp: usize, limit: usize) -> (usize, bool) {
+            if exp == 0 {
+                return (1, false);
+            }
+
+            let mut base = self;
+            let mut acc: usize = 1;
+            let mut overflow = false;
+
+            while exp > 0 {
+                if exp & 1 == 1 {
+                    let (new_acc, acc_overflow) = acc.overflowing_mul(base);
+                    overflow |= acc_overflow;
+
+                    let (new_acc, acc_overflow) = new_acc.overflowing_rem(limit);
+                    overflow |= acc_overflow;
+                    acc = new_acc;
+                }
+
+                let (new_base, base_overflow) = base.overflowing_mul(base);
+                overflow |= base_overflow;
+
+                let (new_base, base_overflow) = new_base.overflowing_rem(limit);
+                overflow |= base_overflow;
+
+                base = new_base;
+
+                exp >>= 1;
+            }
+
+            (acc, overflow)
+        }
     }
 }
