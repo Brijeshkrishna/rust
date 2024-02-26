@@ -3535,12 +3535,14 @@ macro_rules! int_impl {
         /// ```
         #[doc = concat!("let x: ", stringify!($SelfT), " = 2; // or any other integer type")]
         ///
-        /// assert_eq!(x.pow(5,3), 2);
+        /// assert_eq!(x.pow_mod(5,3), 2);
         /// ```
+        #[stable(feature = "pow_mod", since = "1.76.0")]
+        #[rustc_const_stable(feature = "const_int_pow_mod", since = "1.76.0")]
         #[must_use = "this returns the result of the operation, \
                       without modifying the original"]
         #[inline]
-        pub const fn pow_mod(self, mut exp: usize, limit: usize) -> usize {
+        pub const fn pow_mod(self, mut exp: Self, limit: Self) -> Self {
             if exp == 0 {
                 return 1;
             }
@@ -3558,7 +3560,7 @@ macro_rules! int_impl {
             (acc * base) % limit
         }
 
-        /// Wrapping (modular) exponentiation. Computes `self.pow(exp,limit)`,
+        /// Wrapping (modular) exponentiation. Computes `self.wrapping_pow_mod(exp,limit)`,
         /// wrapping around at the boundary of the type.
         ///
         /// # Examples
@@ -3567,14 +3569,16 @@ macro_rules! int_impl {
         ///
         /// ```
         #[doc = concat!("assert_eq!(3", stringify!($SelfT), ".wrapping_pow(4), 81);")]
-        /// assert_eq!(3i8.wrapping_pow(5), -13);
-        /// assert_eq!(3i8.wrapping_pow(6), -39);
+        /// assert_eq!(7u32.wrapping_pow_mod(1024,14),Some(7));
+        /// assert_eq!(10_240_000_000u32.wrapping_pow_mod(u32::MAX,7), None);
         /// ```
+        #[stable(feature = "pow_mod", since = "1.76.0")]
+        #[rustc_const_stable(feature = "const_pow_mod", since = "1.76.0")]
         #[must_use = "this returns the result of the operation, \
                       without modifying the original"]
         #[inline]
-        const fn wrapping_pow_mod(self, exp: usize, limit: usize) -> Option<usize> {
-            let (a, b) = overflowing_pow_mod(self, exp, limit);
+        pub const fn wrapping_pow_mod(self, exp: Self, limit: Self) -> Option<Self> {
+            let (a, b) = self.overflowing_pow_mod(exp, limit);
             if b == true {
                 None
             } else {
@@ -3599,17 +3603,18 @@ macro_rules! int_impl {
         /// assert_eq!(7u32.overflowing_pow_mod(1024,14), (7, false));
         /// assert_eq!(10_240_000_000u32.overflowing_pow_mod(u32::MAX,7), (2, true));
         /// ```
-
+        #[stable(feature = "pow_mod", since = "1.76.0")]
+        #[rustc_const_stable(feature = "const_int_pow_mod", since = "1.76.0")]
         #[must_use = "this returns the result of the operation, \
             without modifying the original"]
         #[inline(always)]
-        pub const fn overflowing_pow_mod(self, mut exp: usize, limit: usize) -> (usize, bool) {
+        pub const fn overflowing_pow_mod(self, mut exp: Self, limit: Self) -> (Self, bool) {
             if exp == 0 {
                 return (1, false);
             }
 
             let mut base = self;
-            let mut acc: usize = 1;
+            let mut acc :Self = 1;
             let mut overflow = false;
 
             while exp > 0 {
