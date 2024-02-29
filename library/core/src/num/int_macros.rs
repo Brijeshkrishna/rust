@@ -3526,7 +3526,7 @@ macro_rules! int_impl {
             Self::MAX
         }
 
-        /// Raises self to the power of `exp` and mod by `limit`, using exponentiation by squaring and mode.
+        /// Raises self to the power of `exp` and mod by `modulus`
         ///
         /// # Examples
         ///
@@ -3542,7 +3542,7 @@ macro_rules! int_impl {
         #[must_use = "this returns the result of the operation, \
                       without modifying the original"]
         #[inline]
-        pub const fn pow_mod(self, mut exp: Self, limit: Self) -> Self {
+        pub const fn pow_mod(self, mut exp: usize, modulus: $UnsignedT) -> $UnsignedT {
             if exp == 0 {
                 return 1;
             }
@@ -3552,15 +3552,15 @@ macro_rules! int_impl {
 
             while exp > 1 {
                 if (exp & 1) == 1 {
-                    acc = (acc * base) % limit;
+                    acc = acc * base % modulus as Self;
                 }
                 exp /= 2;
-                base = (base * base) % limit;
+                base = (base * base) % modulus as Self;
             }
-            (acc * base) % limit
+            (acc * base) as $UnsignedT % modulus
         }
 
-        /// Wrapping (modular) exponentiation. Computes `self.wrapping_pow_mod(exp,limit)`,
+        /// Wrapping (modular) pow mod. Computes `self.wrapping_pow_mod(exp,limit)`,
         /// wrapping around at the boundary of the type.
         ///
         /// # Examples
@@ -3568,7 +3568,7 @@ macro_rules! int_impl {
         /// Basic usage:
         ///
         /// ```
-        #[doc = concat!("assert_eq!(3", stringify!($SelfT), ".wrapping_pow(4), 81);")]
+        #[doc = concat!("assert_eq!(3", stringify!($SelfT), ".wrapping_pow(4,6), Some(81));")]
         /// assert_eq!(7u32.wrapping_pow_mod(1024,14),Some(7));
         /// assert_eq!(10_240_000_000u32.wrapping_pow_mod(u32::MAX,7), None);
         /// ```
@@ -3577,8 +3577,8 @@ macro_rules! int_impl {
         #[must_use = "this returns the result of the operation, \
                       without modifying the original"]
         #[inline]
-        pub const fn wrapping_pow_mod(self, exp: Self, limit: Self) -> Option<Self> {
-            let (a, b) = self.overflowing_pow_mod(exp, limit);
+        pub const fn wrapping_pow_mod(self, exp: usize, modulus: $UnsignedT) -> Option<$UnsignedT> {
+            let (a, b) = self.overflowing_pow_mod(exp, modulus);
             if b == true {
                 None
             } else {
@@ -3586,7 +3586,7 @@ macro_rules! int_impl {
             }
         }
 
-        /// Calculates the power mod of `self` and `exp` % `limit`.
+        /// Calculates the power mod of `self` and `exp` % `modulus`.
         ///
         /// Returns a tuple of the power mod along with a boolean
         /// indicating whether an arithmetic overflow would occur. If an
@@ -3608,7 +3608,7 @@ macro_rules! int_impl {
         #[must_use = "this returns the result of the operation, \
             without modifying the original"]
         #[inline(always)]
-        pub const fn overflowing_pow_mod(self, mut exp: Self, limit: Self) -> (Self, bool) {
+        pub const fn overflowing_pow_mod(self, mut exp: usize, modulus: $UnsignedT) -> ($UnsignedT, bool) {
             if exp == 0 {
                 return (1, false);
             }
@@ -3622,7 +3622,7 @@ macro_rules! int_impl {
                     let (new_acc, acc_overflow) = acc.overflowing_mul(base);
                     overflow |= acc_overflow;
 
-                    let (new_acc, acc_overflow) = new_acc.overflowing_rem(limit);
+                    let (new_acc, acc_overflow) = new_acc.overflowing_rem(modulus as Self);
                     overflow |= acc_overflow;
                     acc = new_acc;
                 }
@@ -3630,7 +3630,7 @@ macro_rules! int_impl {
                 let (new_base, base_overflow) = base.overflowing_mul(base);
                 overflow |= base_overflow;
 
-                let (new_base, base_overflow) = new_base.overflowing_rem(limit);
+                let (new_base, base_overflow) = new_base.overflowing_rem(modulus as Self);
                 overflow |= base_overflow;
 
                 base = new_base;
@@ -3638,7 +3638,7 @@ macro_rules! int_impl {
                 exp >>= 1;
             }
 
-            (acc, overflow)
+            (acc as $UnsignedT, overflow)
         }
     }
 }
