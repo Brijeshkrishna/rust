@@ -3663,5 +3663,120 @@ macro_rules! int_impl {
         pub const fn max_value() -> Self {
             Self::MAX
         }
+
+        /// Raises self to the power of `exp` and mod by `modulus`
+        ///
+        /// # Examples
+        ///
+        /// Basic usage:
+        ///
+        /// ```
+        #[doc = concat!("let x: ", stringify!($SelfT), " = 2; // or any other integer type")]
+        ///
+        /// assert_eq!(x.pow_mod(5,3), 2);
+        /// ```
+        #[stable(feature = "pow_mod", since = "1.76.0")]
+        #[rustc_const_stable(feature = "const_int_pow_mod", since = "1.76.0")]
+        #[must_use = "this returns the result of the operation, \
+                      without modifying the original"]
+        #[inline]
+        pub const fn pow_mod(self, mut exp: usize, modulus: $UnsignedT) -> $UnsignedT {
+            if exp == 0 {
+                return 1;
+            }
+
+            let mut base = self;
+            let mut acc = 1;
+
+            while exp > 1 {
+                if (exp & 1) == 1 {
+                    acc = acc * base % modulus as Self;
+                }
+                exp /= 2;
+                base = (base * base) % modulus as Self;
+            }
+            (acc * base) as $UnsignedT % modulus
+        }
+
+        /// Wrapping (modular) pow mod. Computes `self.wrapping_pow_mod(exp,limit)`,
+        /// wrapping around at the boundary of the type.
+        ///
+        /// # Examples
+        ///
+        /// Basic usage:
+        ///
+        /// ```
+        #[doc = concat!("assert_eq!(3", stringify!($SelfT), ".wrapping_pow(4,6), Some(81));")]
+        /// assert_eq!(7u32.wrapping_pow_mod(1024,14),Some(7));
+        /// assert_eq!(10_240_000_000u32.wrapping_pow_mod(u32::MAX,7), None);
+        /// ```
+        #[stable(feature = "pow_mod", since = "1.76.0")]
+        #[rustc_const_stable(feature = "const_pow_mod", since = "1.76.0")]
+        #[must_use = "this returns the result of the operation, \
+                      without modifying the original"]
+        #[inline]
+        pub const fn wrapping_pow_mod(self, exp: usize, modulus: $UnsignedT) -> Option<$UnsignedT> {
+            let (a, b) = self.overflowing_pow_mod(exp, modulus);
+            if b == true {
+                None
+            } else {
+                Some(a)
+            }
+        }
+
+        /// Calculates the power mod of `self` and `exp` % `modulus`.
+        ///
+        /// Returns a tuple of the power mod along with a boolean
+        /// indicating whether an arithmetic overflow would occur. If an
+        /// overflow would have occurred then the wrapped value is returned.
+        ///
+        /// # Examples
+        ///
+        /// Basic usage:
+        ///
+        /// Please note that this example is shared between integer types.
+        /// Which explains why `u32` is used here.
+        ///
+        /// ```
+        /// assert_eq!(7u32.overflowing_pow_mod(1024,14), (7, false));
+        /// assert_eq!(10_240_000_000u32.overflowing_pow_mod(u32::MAX,7), (2, true));
+        /// ```
+        #[stable(feature = "pow_mod", since = "1.76.0")]
+        #[rustc_const_stable(feature = "const_int_pow_mod", since = "1.76.0")]
+        #[must_use = "this returns the result of the operation, \
+            without modifying the original"]
+        #[inline(always)]
+        pub const fn overflowing_pow_mod(self, mut exp: usize, modulus: $UnsignedT) -> ($UnsignedT, bool) {
+            if exp == 0 {
+                return (1, false);
+            }
+
+            let mut base = self;
+            let mut acc :Self = 1;
+            let mut overflow = false;
+
+            while exp > 0 {
+                if exp & 1 == 1 {
+                    let (new_acc, acc_overflow) = acc.overflowing_mul(base);
+                    overflow |= acc_overflow;
+
+                    let (new_acc, acc_overflow) = new_acc.overflowing_rem(modulus as Self);
+                    overflow |= acc_overflow;
+                    acc = new_acc;
+                }
+
+                let (new_base, base_overflow) = base.overflowing_mul(base);
+                overflow |= base_overflow;
+
+                let (new_base, base_overflow) = new_base.overflowing_rem(modulus as Self);
+                overflow |= base_overflow;
+
+                base = new_base;
+
+                exp >>= 1;
+            }
+
+            (acc as $UnsignedT, overflow)
+        }
     }
 }
